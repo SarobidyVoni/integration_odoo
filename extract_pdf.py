@@ -66,16 +66,27 @@ def resolve_header_mapping(header):
 
     return mapping
 
-
 def is_header_row(row):
     text = normalize(" ".join(str(x) for x in row if x))
-    kws = ["PROFILE","RESOURCE","DESCRIPTION","RATE","PRIX","DAY","JOUR","JH","TOTAL"]
+
+    kws = [
+        "PROFILE","RESOURCE","DESCRIPTION",
+        "RATE","PRIX","DAY","JOUR","JH",
+        "COUT","COST","UNIT","UNITE","UNITES",
+        "EURO","EUROS","HT","REPARTITION"
+    ]
+
     score = sum(1 for k in kws if k in text)
 
     non_empty = [x for x in row if str(x).strip()]
     num = sum(1 for x in non_empty if is_amount(x))
 
-    return score >= 2 and (len(non_empty)==0 or num/len(non_empty) <= 0.3)
+    ratio_num = num / len(non_empty) if non_empty else 0
+
+    log(f"🔍 HEADER CHECK → text='{text}' | score={score} | ratio_num={ratio_num:.2f}")
+
+    return score >= 2 and ratio_num < 0.5
+
 
 def find_header_index(table):
     for i, r in enumerate(table):
@@ -124,12 +135,31 @@ def reconstruct_table(page):
         lines[round(w['top'],1)].append(w)
     return [[w['text'] for w in sorted(v,key=lambda x:x['x0'])] for k,v in sorted(lines.items())]
 
+def is_table_empty(table):
+    for row in table:
+        for cell in row:
+            if cell and str(cell).strip():
+                return False
+    return True
+
 def extract_tables_robust(page):
     t = page.extract_tables({"vertical_strategy":"lines","horizontal_strategy":"lines"})
-    if t: return t
+
+    if t:
+        t = [tab for tab in t if not is_table_empty(tab)]
+        if t:
+            return t
+
     t = page.extract_tables({"vertical_strategy":"text","horizontal_strategy":"text"})
-    if t: return t
+
+    if t:
+        t = [tab for tab in t if not is_table_empty(tab)]
+        if t:
+            return t
+
+    log("⚠️ Fallback reconstruct_table utilisé")
     return [reconstruct_table(page)]
+
 
 # ===== MAIN
 def extract_pdf_tables(pdf_path):
@@ -138,39 +168,73 @@ def extract_pdf_tables(pdf_path):
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            for table in extract_tables_robust(page):
-                for sub in split_merged_table(table):
+            log(f"\n==================== wsPAGE {page.page_number} ====================")
+
+            tables = extract_tables_robust(page)
+
+            log(f"\n📄 Nombre de tables détectées: {len(tables)}")
+
+            for t_idx, table in enumerate(tables):
+                log(f"\n📄 TABLE BRUTE #{t_idx}")
+                for i, row in enumerate(table):
+                    log(f"{i:02} | {row}")
+
+                subs = split_merged_table(table)
+                log(f"\n🔀 Nombre de sous-tables: {len(subs)}")
+
+                for s_idx, sub in enumerate(subs):
+                    log(f"\n🧱 SOUS-TABLE #{s_idx}")
+                    for i, row in enumerate(sub):
+                        log(f"{i:02} | {row}")
 
                     hi = find_header_index(sub)
-                    if hi is None: 
+
+                    if hi is None:
+                        log("❌ Aucun header détecté")
                         continue
 
                     header = sub[hi]
-                    detected_headers.append(header)   # ✅ IMPORTANT
+                    detected_headers.append(header)
+
+                    log(f"\n✅ HEADER DÉTECTÉ (ligne {hi})")
+                    log(header)
 
                     mapping = resolve_header_mapping(header)
+                    log(f"🧭 MAPPING: {mapping}")
 
-                    # log(f"\nHEADER: {header}")
-                    # log(f"MAPPING: {mapping}")
+                    for row_idx, row in enumerate(sub[hi+1:], start=hi+1):
 
-                    for row in sub[hi+1:]:
+                        log(f"\n➡️ Ligne brute #{row_idx}: {row}")
+
                         r = clean_row(row)
-                        if not r or not is_valid_product_row(r):
+
+                        if not r:
+                            log("⛔ Ligne ignorée (vide après clean)")
                             continue
 
+                        log(f"🧹 Ligne clean: {r}")
+
+                        if not is_valid_product_row(r):
+                            log("⛔ Ligne rejetée (pas une ligne produit)")
+                            continue
+
+                        log("✅ Ligne considérée comme produit")
+
                         d = build_row_dict(r, mapping)
+
                         if d:
+                            log(f"📦 Data extraite: {d}")
                             results.append(d)
-                            # log(f"✅ {d}")
+                        else:
+                            log("⛔ Impossible de construire le dict")
 
-    return results, detected_headers   # ✅ ICI LE FIX
-
+    return results, detected_headers
 # =========================
 # TEST
 # =========================
 if __name__ == "__main__":
     results = extract_pdf_tables(
-        r"D:\Sarobidy\Projet_PULSE\ODOO\2026\2026\GROUP\AXIAN ENERGY\NEA\CP-OPS-MigrationMSIntune\DEVIS\Devis_NEA_SN_INTUNE_15122025.pdf"
+       r"D:\Sarobidy\Projet_PULSE\ODOO\2026\2026\GROUP\AXIAN TELECOM\Yas KM\CP-YASKM-MigrationSageV11\DEVIS\Telma Comores - DEVIS Projet Migration SAGE FRP 1000 V9 vers V11.pdf"
     )
 
     print("\n=== RÉSULTATS FINAUX ===")
