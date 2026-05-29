@@ -53,8 +53,15 @@ def resolve_header_mapping(header):
             mapping["product"] = i
 
         # ✅ PRICE AVANT QUANTITY (🔥 FIX PRINCIPAL)
-        elif any(k in t for k in ["RATE","PRIX","TAUX","COST","TJM"]):
+        elif any(k in t for k in ["RATE","PRIX","TAUX","TJM"]):
             mapping["price"] = i
+
+        elif "TOTAL" in t and any(k in t for k in ["COST","COUT"]):
+            mapping["total"] = i  # ✅ nouvelle clé
+
+        elif any(k in t for k in ["COST","COUT"]):
+            if "price" not in mapping:
+                mapping["price"] = i
 
         # ✅ UTILISER t (PAS text)
         elif any(k in t for k in [
@@ -234,7 +241,7 @@ def extract_pdf_tables(pdf_path):
 # =========================
 if __name__ == "__main__":
     results = extract_pdf_tables(
-       r"D:\Sarobidy\Projet_PULSE\ODOO\2026\2026\GROUP\AXIAN TELECOM\Yas KM\CP-YASKM-MigrationSageV11\DEVIS\Telma Comores - DEVIS Projet Migration SAGE FRP 1000 V9 vers V11.pdf"
+       r"D:\Sarobidy\Projet_PULSE\ODOO\2026\2026\GROUP\AXIAN TELECOM\ATME-AXITEL\ATE20250701-DigitalServicesPhase1\DEVIS\AXIAN TELECOM - Dedicated team Phase 1 - Prestations Digitales V1.pdf"
     )
 
     print("\n=== RÉSULTATS FINAUX ===")
