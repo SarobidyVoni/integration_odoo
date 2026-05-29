@@ -103,6 +103,26 @@ for type_client in os.listdir(ROOT_PATH):
 
             has_project = False
 
+            # ✅ CAS : client sans projet
+            if not any(os.path.isdir(os.path.join(client_path, d)) for d in os.listdir(client_path)):
+                diagnostic = "Client non associé à un projet"
+                row = empty_project_row("N/A", client, "", type_client, cluster, diagnostic)
+
+                logger.log_pdf(
+                    file_name=f"{client} [no project]",
+                    status="PDF_ERRORS",
+                    score=0,
+                    currency=None,
+                    rows_extracted=0,
+                    valid_rows=0,
+                    headers_detected=[],
+                    missing_columns=["project folder"],
+                    detected_issues=[diagnostic],
+                )
+
+                rows_error.append(row)
+                continue
+
             for code_projet in os.listdir(client_path):
                 projet_path = os.path.join(client_path, code_projet)
 
