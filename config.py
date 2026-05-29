@@ -44,14 +44,99 @@ CURRENCY_SYMBOLS = {
 # HEADER KEYWORDS (extensible)
 # =========================
 HEADER_KEYWORDS = {
-    "profile":   ["RESOURCE", "PROFILE", "RESSOURCE", "PROFIL", "ROLE"],
-    "rate":      ["RATE", "TAUX", "PRIX", "COST", "COUT", "JOURNALIER", "TJM"],
-    "unit":      ["UNIT", "UNITE", "JOUR", "DAY", "HOMME", "JH","DAYS"],
-    "id":        ["ID", "#", "NO"],
-    "seniority": ["SENIORITE", "SENIORITY", "SENIOR", "EXPERT"],
-    "total":     ["TOTAL", "COUT TOTAL", "MONTANT"],
-}
 
+    # -------------------------
+    # 🧾 PRODUIT / PROFIL
+    # -------------------------
+    "profile": [
+        "RESOURCE",
+        "PROFILE",
+        "RESSOURCE",
+        "PROFIL",
+        "ROLE",
+        "SERVICE",
+        "DESIGNATION",
+        "LIBELLE",
+        "DESCRIPTION",
+        "DESCRIPTIONS"
+    ],
+
+    # -------------------------
+    # 💰 PRIX (UNITAIRE)
+    # ⚠️ ordre important (spécifique → générique)
+    # -------------------------
+    "rate": [
+        "TJM",
+        "RATE",
+        "UNIT PRICE",
+        "PRIX UNITAIRE",
+        "DAILY RATE",
+        "DAILY FEE",
+        "JOURNALIER",
+        "TARIF",
+        "TAUX",
+        "PRIX"
+    ],
+
+    # -------------------------
+    # 🔢 QUANTITÉ
+    # -------------------------
+    "unit": [
+        "UNIT",
+        "UNITE",
+        "UNITES",
+        "DAY",
+        "DAYS",
+        "JOUR",
+        "JOURS",
+        "JH",
+        "HOMME",
+        "HOMMES",
+        "JOURHOMME",
+        "QUANTITE",
+        "QTE",
+        "QTY",
+        "VOLUME",
+        "NOMBRE",
+        "NBR"
+    ],
+
+    # -------------------------
+    # 🧮 TOTAL (séparé du price)
+    # -------------------------
+    "total": [
+        "TOTAL",
+        "TOTAL COST",
+        "COUT TOTAL",
+        "MONTANT TOTAL",
+        "TOTAL HT",
+        "TOTAL TTC"
+    ],
+
+    # -------------------------
+    # 🆔 IDENTIFIANTS
+    # -------------------------
+    "id": [
+        "ID",
+        "#",
+        "NO",
+        "NUM",
+        "N°"
+    ],
+
+    # -------------------------
+    # 🎓 SENIORITÉ (optionnel)
+    # -------------------------
+    "seniority": [
+        "SENIORITY",
+        "SENIORITE",
+        "SENIOR",
+        "JUNIOR",
+        "EXPERT",
+        "MID",
+        "LEVEL"
+    ]
+}
 # =========================
 # COLONNES EXPORT ODOO
 # =========================

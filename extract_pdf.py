@@ -1,5 +1,8 @@
 import pdfplumber, re, unicodedata
 from collections import defaultdict
+from config import HEADER_KEYWORDS
+
+
 
 DEBUG = True
 def log(x): 
@@ -20,28 +23,98 @@ def is_amount(val):
     val = re.sub(r'(€|\$|£|MGA|AR)', '', str(val)).replace(" ", "")
     return bool(re.match(r'^\d+([.,]\d+)?$', val))
 
+# def resolve_header_mapping(header):
+#     text = normalize(" ".join(str(x) for x in header if x))
+#     text = re.sub(r'\s+', ' ', text)
+
+#     # ===== CAS FUSIONNÉ
+#     if len([x for x in header if x]) == 1:
+#         words = text.split()
+#         mapping = {}
+#         for i, w in enumerate(words):
+#             if w in ["DESCRIPTION", "PROFILE", "RESOURCE", "PROFIL","DESCRIPTIONS","DESIGNATION","LIBELLE","REPARTITION","REPARTITION DES COUTS"]:
+#                 mapping["product"] = i
+
+#             # ✅ PRICE AVANT QUANTITY
+#             elif w in ["RATE", "PRIX", "TAUX", "COST", "TJM","COUT"]:
+#                 mapping["price"] = i
+
+#             elif w in ["DAY", "DAYS", "JOUR", "JH", "UNITE", "UNIT","UNITES"]:
+#                 mapping["quantity"] = i
+
+#         return mapping
+
+#     # ===== CAS NORMAL
+#     mapping = {}
+
+#     for i, c in enumerate(header):
+#         t = normalize(c)
+#         t = re.sub(r'[^A-Z ]', ' ', t)
+
+#         # ✅ PRODUCT
+#         if any(k in t for k in ["PROFILE","RESOURCE","DESCRIPTION","PROFIL"]):
+#             mapping["product"] = i
+
+#         # ✅ PRICE AVANT QUANTITY (🔥 FIX PRINCIPAL)
+#         elif any(k in t for k in ["RATE","PRIX","TAUX","TJM"]):
+#             mapping["price"] = i
+
+#         elif "TOTAL" in t and any(k in t for k in ["COST","COUT"]):
+#             mapping["total"] = i  # ✅ nouvelle clé
+
+#         elif any(k in t for k in ["COST","COUT"]):
+#             if "price" not in mapping:
+#                 mapping["price"] = i
+
+#         # ✅ UTILISER t (PAS text)
+#         elif any(k in t for k in [
+#             "DAY", "DAYS", "JOUR", "JH",
+#             "JOURS", "HOMME", "JOURHOMME",
+#             "UNITE", "UNIT"
+#         ]):
+#             mapping["quantity"] = i
+
+#     return mapping
+
+
+
 def resolve_header_mapping(header):
     text = normalize(" ".join(str(x) for x in header if x))
     text = re.sub(r'\s+', ' ', text)
 
-    # ===== CAS FUSIONNÉ
+    # =========================
+    # ✅ CAS FUSIONNÉ (CONSERVÉ)
+    # =========================
     if len([x for x in header if x]) == 1:
         words = text.split()
         mapping = {}
+
         for i, w in enumerate(words):
-            if w in ["DESCRIPTION", "PROFILE", "RESOURCE", "PROFIL","DESCRIPTIONS","DESIGNATION","LIBELLE","REPARTITION","REPARTITION DES COUTS"]:
-                mapping["product"] = i
 
-            # ✅ PRICE AVANT QUANTITY
-            elif w in ["RATE", "PRIX", "TAUX", "COST", "TJM","COUT"]:
-                mapping["price"] = i
+            # ✅ PRODUCT
+            if any(k in w for k in HEADER_KEYWORDS["profile"]):
+                if "product" not in mapping:
+                    mapping["product"] = i
 
-            elif w in ["DAY", "DAYS", "JOUR", "JH", "UNITE", "UNIT","UNITES"]:
-                mapping["quantity"] = i
+            # ✅ PRICE (prioritaire)
+            elif any(k in w for k in HEADER_KEYWORDS["rate"]):
+                if "price" not in mapping:
+                    mapping["price"] = i
+
+            # ✅ TOTAL
+            elif any(k in w for k in HEADER_KEYWORDS["total"]) and "TOTAL" in w:
+                mapping["total"] = i
+
+            # ✅ QUANTITY
+            elif any(k in w for k in HEADER_KEYWORDS["unit"]):
+                if "quantity" not in mapping:
+                    mapping["quantity"] = i
 
         return mapping
 
-    # ===== CAS NORMAL
+    # =========================
+    # ✅ CAS NORMAL
+    # =========================
     mapping = {}
 
     for i, c in enumerate(header):
@@ -49,27 +122,28 @@ def resolve_header_mapping(header):
         t = re.sub(r'[^A-Z ]', ' ', t)
 
         # ✅ PRODUCT
-        if any(k in t for k in ["PROFILE","RESOURCE","DESCRIPTION","PROFIL"]):
-            mapping["product"] = i
+        if any(k in t for k in HEADER_KEYWORDS["profile"]):
+            if "product" not in mapping:
+                mapping["product"] = i
 
-        # ✅ PRICE AVANT QUANTITY (🔥 FIX PRINCIPAL)
-        elif any(k in t for k in ["RATE","PRIX","TAUX","TJM"]):
-            mapping["price"] = i
+        # ✅ PRICE (prioritaire)
+        elif any(k in t for k in HEADER_KEYWORDS["rate"]):
+            if "price" not in mapping:
+                mapping["price"] = i
 
-        elif "TOTAL" in t and any(k in t for k in ["COST","COUT"]):
-            mapping["total"] = i  # ✅ nouvelle clé
+        # ✅ TOTAL (évite collision avec COST)
+        elif any(k in t for k in HEADER_KEYWORDS["total"]) and "TOTAL" in t:
+            mapping["total"] = i
 
+        # ✅ COST fallback → uniquement si price absent
         elif any(k in t for k in ["COST","COUT"]):
             if "price" not in mapping:
                 mapping["price"] = i
 
-        # ✅ UTILISER t (PAS text)
-        elif any(k in t for k in [
-            "DAY", "DAYS", "JOUR", "JH",
-            "JOURS", "HOMME", "JOURHOMME",
-            "UNITE", "UNIT"
-        ]):
-            mapping["quantity"] = i
+        # ✅ QUANTITY
+        elif any(k in t for k in HEADER_KEYWORDS["unit"]):
+            if "quantity" not in mapping:
+                mapping["quantity"] = i
 
     return mapping
 
